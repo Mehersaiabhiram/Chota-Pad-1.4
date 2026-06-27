@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chota Pad — Save files anywhere</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   GLOBAL RESET & TOKENS
+═══════════════════════════════════════════ */
+:root{
+  --navy:#040d1a; --deep:#061428;
+  --teal:#0ecece; --teal2:#06a3a3;
+  --blue:#2E86C1; --blue-lt:#5DADE2;
+  --accent:#0ecece;
+  --text:#f0f6ff; --muted:rgba(200,220,255,.52);
+  --card-bg:rgba(8,22,46,.62);
+  --border:rgba(14,206,206,.18);
+  --t:.28s cubic-bezier(.4,0,.2,1);
+  /* light sections */
+  --lt-bg:#f5f7fa; --lt-text:#1a2540; --lt-muted:#6b7a99;
+  --lt-border:#e0e8f4;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Figtree',sans-serif;background:var(--navy);color:var(--text);overflow:hidden;}
+
+/* ═══════════════════════════════════════════
+   LOGIN PAGE — SCROLLABLE LANDING
+═══════════════════════════════════════════ */
+#loginPage{
+  position:fixed;inset:0;z-index:10;
+  overflow-y:auto;overflow-x:hidden;
+  transition:opacity .55s ease,transform .55s ease;
+  /* custom scrollbar */
+  scrollbar-width:thin;scrollbar-color:rgba(14,206,206,.3) transparent;
+}
+#loginPage::-webkit-scrollbar{width:5px;}
+#loginPage::-webkit-scrollbar-thumb{background:rgba(14,206,206,.3);border-radius:99px;}
+#loginPage.hiding{opacity:0;transform:scale(.97);pointer-events:none;}
+
+/* ──────────────────────────────────────────
+   SECTION 1: DARK HERO
+────────────────────────────────────────── */
+.hero-section{
+  position:relative;
+  min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:80px 24px 100px;
+  text-align:center;
+  overflow:hidden;
+}
+
+/* Gradient bg */
+.hero-bg{
+  position:absolute;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 90% 55% at 50% -5%, rgba(14,206,206,.2) 0%, transparent 68%),
+    radial-gradient(ellipse 55% 45% at 85% 85%, rgba(26,124,250,.16) 0%, transparent 60%),
+    linear-gradient(160deg,#040d1a 0%,#061428 45%,#071e3d 75%,#040d1a 100%);
+}
+
+/* Code canvas */
+#codeCanvas{position:absolute;inset:0;z-index:1;opacity:.11;pointer-events:none;}
+
+/* Orbs */
+.orb{position:absolute;border-radius:50%;filter:blur(90px);pointer-events:none;}
+.orb-1{width:500px;height:500px;background:rgba(14,206,206,.12);top:-130px;left:-90px;animation:orbDrift 20s ease-in-out infinite alternate;z-index:2;}
+.orb-2{width:380px;height:380px;background:rgba(26,124,250,.11);bottom:-70px;right:-70px;animation:orbDrift 26s ease-in-out infinite alternate-reverse;z-index:2;}
+.orb-3{width:260px;height:260px;background:rgba(14,206,206,.08);top:45%;left:62%;animation:orbDrift 16s ease-in-out infinite alternate;z-index:2;}
+@keyframes orbDrift{from{transform:translate(0,0)}to{transform:translate(38px,28px)}}
+
+/* Hero content */
+.hero-content{position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;animation:heroIn .9s cubic-bezier(.22,1,.36,1) both;}
+@keyframes heroIn{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
+
+.hero-badge{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:6px 18px;margin-bottom:30px;
+  border-radius:99px;background:rgba(14,206,206,.1);border:1px solid rgba(14,206,206,.25);
+  font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--teal);
+  animation:heroIn .9s .1s cubic-bezier(.22,1,.36,1) both;
+}
+.hero-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 7px var(--teal);}
+
+.hero-h1{
+  font-family:'Syne',sans-serif;
+  font-size:clamp(34px,5.8vw,70px);font-weight:800;line-height:1.07;letter-spacing:-.03em;
+  max-width:780px;margin-bottom:20px;color:#fff;
+  animation:heroIn .9s .18s cubic-bezier(.22,1,.36,1) both;
+}
+.hero-h1 .grad{
+  background:linear-gradient(90deg,#fff 20%,var(--teal) 60%,var(--blue-lt));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+
+.hero-sub{
+  font-size:clamp(14px,1.7vw,18px);font-weight:400;color:var(--muted);
+  max-width:460px;line-height:1.65;margin-bottom:44px;
+  animation:heroIn .9s .26s cubic-bezier(.22,1,.36,1) both;
+}
+
+/* Glass card */
+.glass-card{
+  width:min(490px,94vw);padding:36px 38px 30px;border-radius:24px;
+  background:var(--card-bg);
+  backdrop-filter:blur(28px) saturate(1.5);-webkit-backdrop-filter:blur(28px) saturate(1.5);
+  border:1px solid var(--border);
+  box-shadow:0 0 0 1px rgba(14,206,206,.06),0 28px 80px rgba(0,0,0,.55),0 0 50px rgba(14,206,206,.06) inset;
+  animation:heroIn .9s .34s cubic-bezier(.22,1,.36,1) both;
+  position:relative;overflow:hidden;
+}
+.glass-card::before{
+  content:'';position:absolute;top:0;left:12%;right:12%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(14,206,206,.55),transparent);
+}
+.card-instruction{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:22px;}
+.card-instruction strong{color:rgba(210,235,255,.88);font-weight:600;}
+.card-error{
+  font-size:13px;color:#f87171;background:rgba(248,113,113,.1);
+  border:1px solid rgba(248,113,113,.2);border-radius:10px;
+  padding:9px 14px;margin-bottom:14px;display:none;
+}
+.input-row{display:flex;gap:9px;margin-bottom:11px;}
+.code-input{
+  flex:1;padding:13px 17px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(14,206,206,.22);border-radius:12px;
+  color:#fff;font-size:15px;font-family:'Figtree',sans-serif;font-weight:500;letter-spacing:.05em;outline:none;
+  transition:border-color var(--t),background var(--t),box-shadow var(--t);
+}
+.code-input::placeholder{color:rgba(150,180,220,.38);font-weight:400;letter-spacing:0;}
+.code-input:focus{border-color:var(--teal);background:rgba(14,206,206,.07);box-shadow:0 0 0 3px rgba(14,206,206,.14),0 0 18px rgba(14,206,206,.07);}
+.btn-open{
+  padding:13px 24px;border:none;border-radius:12px;
+  background:linear-gradient(135deg,var(--teal),var(--teal2),#058a8a);
+  color:#021a1a;font-size:15px;font-weight:700;font-family:'Figtree',sans-serif;
+  cursor:pointer;white-space:nowrap;
+  transition:transform var(--t),box-shadow var(--t),opacity var(--t);
+  box-shadow:0 6px 22px rgba(14,206,206,.35);position:relative;overflow:hidden;
+}
+.btn-open::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.22),transparent);opacity:0;transition:opacity var(--t);}
+.btn-open:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(14,206,206,.5);}
+.btn-open:hover::after{opacity:1;}
+.btn-open:active{transform:translateY(0);}
+.btn-open:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.helper-text{font-size:12px;color:rgba(150,180,220,.42);text-align:center;}
+.helper-text i{font-size:12px;vertical-align:middle;margin-right:3px;color:rgba(14,206,206,.5);}
+
+/* Trust row */
+.trust-row{
+  display:flex;gap:24px;flex-wrap:wrap;justify-content:center;
+  margin-top:30px;animation:heroIn .9s .48s cubic-bezier(.22,1,.36,1) both;
+}
+.trust-item{display:flex;align-items:center;gap:6px;font-size:12.5px;color:rgba(150,185,230,.42);font-weight:400;}
+.trust-item i{font-size:14px;color:rgba(14,206,206,.42);}
+.trust-item a{color:rgba(14,206,206,.6);text-decoration:none;}
+.trust-item a:hover{color:var(--teal);}
+
+/* Scroll cue */
+.scroll-cue{
+  position:absolute;bottom:32px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  color:rgba(14,206,206,.4);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  animation:fadeUp 1.2s 1.2s ease both;z-index:10;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.scroll-arrow{width:20px;height:20px;border-right:1.5px solid rgba(14,206,206,.35);border-bottom:1.5px solid rgba(14,206,206,.35);transform:rotate(45deg);animation:bounce 1.8s ease-in-out infinite;}
+@keyframes bounce{0%,100%{transform:rotate(45deg) translate(0,0)}50%{transform:rotate(45deg) translate(3px,3px)}}
+
+/* ──────────────────────────────────────────
+   SECTION 2: FEATURES (light grey)
+────────────────────────────────────────── */
+.features-section{
+  background:var(--lt-bg);color:var(--lt-text);
+  padding:100px 24px 110px;text-align:center;
+}
+.section-eyebrow{
+  display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--blue);margin-bottom:14px;
+}
+.section-title{
+  font-family:'Syne',sans-serif;font-size:clamp(26px,3.5vw,42px);font-weight:800;
+  color:var(--lt-text);letter-spacing:-.02em;margin-bottom:16px;
+}
+.section-sub{font-size:16px;color:var(--lt-muted);max-width:520px;margin:0 auto 72px;line-height:1.65;}
+
+.features-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:36px;max-width:960px;margin:0 auto;
+}
+.feature-card{
+  background:#fff;border:1px solid var(--lt-border);border-radius:20px;
+  padding:44px 36px 40px;text-align:center;
+  transition:transform var(--t),box-shadow var(--t),border-color var(--t);
+}
+.feature-card:hover{transform:translateY(-5px);box-shadow:0 20px 50px rgba(46,134,193,.1);border-color:rgba(46,134,193,.25);}
+
+/* SVG icon circle */
+.feat-icon-wrap{
+  width:72px;height:72px;border-radius:50%;
+  border:1.5px solid rgba(46,134,193,.28);
+  background:rgba(46,134,193,.05);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 26px;
+  transition:background var(--t),border-color var(--t);
+}
+.feature-card:hover .feat-icon-wrap{background:rgba(46,134,193,.1);border-color:rgba(46,134,193,.45);}
+.feat-icon-wrap svg{width:30px;height:30px;stroke:var(--blue);stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+
+.feat-title{font-family:'Syne',sans-serif;font-size:19px;font-weight:700;color:var(--lt-text);margin-bottom:12px;letter-spacing:-.01em;}
+.feat-desc{font-size:14.5px;color:var(--lt-muted);line-height:1.7;}
+.feat-desc strong{color:var(--lt-text);font-weight:600;}
+.feat-desc a{color:var(--blue);text-decoration:none;font-weight:500;}
+.feat-desc a:hover{text-decoration:underline;}
+
+/* ──────────────────────────────────────────
+   SECTION 3: POLICY (orange gradient)
+────────────────────────────────────────── */
+.policy-section{
+  background:linear-gradient(135deg,#c0390b 0%,#e8611a 40%,#f4a633 100%);
+  padding:100px 24px 110px;text-align:center;position:relative;overflow:hidden;
+}
+.policy-section::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 70% 60% at 30% 40%,rgba(255,255,255,.08),transparent),
+             radial-gradient(ellipse 50% 50% at 80% 70%,rgba(255,200,80,.1),transparent);
+  pointer-events:none;
+}
+.policy-inner{position:relative;z-index:1;max-width:760px;margin:0 auto;}
+
+.policy-eyebrow{
+  display:inline-block;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:rgba(255,255,255,.65);margin-bottom:14px;
+}
+.policy-title{
+  font-family:'Syne',sans-serif;font-size:clamp(28px,4vw,52px);font-weight:800;
+  color:#fff;letter-spacing:-.02em;margin-bottom:50px;
+}
+
+.policy-list{list-style:none;display:flex;flex-direction:column;gap:0;text-align:left;}
+.policy-item{
+  display:flex;gap:22px;align-items:flex-start;
+  padding:26px 0;border-bottom:1px solid rgba(255,255,255,.14);
+}
+.policy-item:last-child{border-bottom:none;}
+.policy-num{
+  flex-shrink:0;width:38px;height:38px;border-radius:50%;
+  border:1.5px solid rgba(255,255,255,.5);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#fff;
+  margin-top:1px;
+}
+.policy-text{font-size:16px;color:rgba(255,255,255,.88);line-height:1.7;}
+.policy-text strong{color:#fff;font-weight:700;}
+
+/* ──────────────────────────────────────────
+   SECTION 4: FOOTER (light grey)
+────────────────────────────────────────── */
+.footer-section{
+  background:#f0f2f6;border-top:1px solid #dde4ef;
+  padding:48px 24px 44px;text-align:center;
+}
+.footer-back{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:13px;font-weight:600;color:var(--blue);text-decoration:none;letter-spacing:.01em;
+  margin-bottom:28px;transition:color var(--t);
+}
+.footer-back:hover{color:var(--blue-lt);}
+.footer-back i{font-size:14px;}
+.footer-divider{width:40px;height:1.5px;background:var(--lt-border);margin:0 auto 24px;}
+.footer-copy{font-size:13px;color:var(--lt-muted);margin-bottom:10px;}
+.footer-contact{
+  font-size:13px;color:var(--lt-muted);
+}
+.footer-contact a{color:var(--blue);text-decoration:none;font-weight:500;}
+.footer-contact a:hover{text-decoration:underline;}
+
+/* ═══════════════════════════════════════════
+   FILE MANAGER PAGE
+═══════════════════════════════════════════ */
+#fileManagerPage{
+  position:fixed;inset:0;z-index:5;
+  display:none;opacity:0;transition:opacity .4s ease;
+}
+#fileManagerPage.visible{display:flex;}
+#fileManagerPage.shown{opacity:1;}
+
+.sidebar{
+  width:210px;flex-shrink:0;display:flex;flex-direction:column;
+  padding:26px 14px;
+  background:rgba(4,13,26,.88);backdrop-filter:blur(20px);
+  border-right:1px solid rgba(14,206,206,.1);position:relative;z-index:1;
+}
+.sidebar-brand{
+  font-family:'Syne',sans-serif;font-size:20px;font-weight:800;padding:0 8px;margin-bottom:3px;
+  background:linear-gradient(90deg,#fff 40%,var(--teal));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.sidebar-sub{font-size:11px;color:rgba(14,206,206,.5);padding:0 8px;margin-bottom:24px;font-weight:400;letter-spacing:.04em;}
+.nav-label{font-size:10px;letter-spacing:.1em;color:rgba(150,185,230,.35);text-transform:uppercase;padding:0 8px;margin-bottom:7px;font-weight:600;}
+.nav-btn{
+  display:flex;align-items:center;gap:9px;width:100%;padding:10px 11px;
+  border:none;border-radius:10px;background:transparent;
+  color:rgba(150,185,230,.55);font-size:13px;font-family:'Figtree',sans-serif;
+  cursor:pointer;margin-bottom:2px;text-align:left;
+  transition:background var(--t),color var(--t),transform var(--t);
+}
+.nav-btn i{font-size:16px;flex-shrink:0;}
+.nav-btn:hover{background:rgba(14,206,206,.07);color:var(--text);transform:translateX(2px);}
+.nav-btn.active{background:rgba(14,206,206,.1);color:#fff;border:1px solid rgba(14,206,206,.2);}
+.nav-btn.active i{color:var(--teal);}
+.sidebar-spacer{flex:1;}
+.user-chip{
+  display:flex;align-items:center;gap:9px;padding:11px;
+  border-radius:10px;background:rgba(14,206,206,.07);
+  border:1px solid rgba(14,206,206,.14);margin-bottom:8px;
+}
+.user-avatar{
+  width:30px;height:30px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--teal),var(--blue));
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:#021a1a;
+}
+.user-name{font-size:13px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.user-role{font-size:11px;color:rgba(14,206,206,.5);}
+.logout-btn{
+  display:flex;align-items:center;gap:8px;width:100%;padding:10px 11px;
+  border:1px solid rgba(248,113,113,.2);border-radius:10px;
+  background:rgba(248,113,113,.06);color:#f87171;
+  font-size:13px;font-family:'Figtree',sans-serif;cursor:pointer;
+  transition:background var(--t),border-color var(--t),transform var(--t);
+}
+.logout-btn:hover{background:rgba(248,113,113,.14);border-color:rgba(248,113,113,.38);transform:translateX(2px);}
+.logout-btn i{font-size:15px;}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:1;background:var(--navy);}
+.topbar{
+  display:flex;align-items:center;gap:14px;padding:16px 24px;
+  background:rgba(4,13,26,.8);backdrop-filter:blur(16px);
+  border-bottom:1px solid rgba(14,206,206,.08);flex-shrink:0;
+}
+.search-wrap{position:relative;flex:1;max-width:340px;}
+.search-wrap i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:rgba(150,185,230,.4);font-size:16px;}
+.search-input{
+  width:100%;padding:9px 14px 9px 38px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(14,206,206,.14);
+  border-radius:10px;color:var(--text);font-size:13.5px;font-family:'Figtree',sans-serif;outline:none;
+  transition:border-color var(--t),background var(--t),box-shadow var(--t);
+}
+.search-input::placeholder{color:rgba(150,185,230,.3);}
+.search-input:focus{border-color:var(--teal);background:rgba(14,206,206,.05);box-shadow:0 0 0 3px rgba(14,206,206,.1);}
+.topbar-right{display:flex;align-items:center;gap:8px;margin-left:auto;}
+.icon-btn{
+  width:36px;height:36px;border-radius:9px;border:1px solid rgba(14,206,206,.14);
+  background:rgba(255,255,255,.04);color:rgba(150,185,230,.5);font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background var(--t),color var(--t),border-color var(--t),transform var(--t);
+}
+.icon-btn:hover{background:rgba(14,206,206,.1);color:var(--teal);border-color:rgba(14,206,206,.3);transform:scale(1.07);}
+.content{flex:1;overflow-y:auto;padding:24px;}
+.content::-webkit-scrollbar{width:4px;}
+.content::-webkit-scrollbar-thumb{background:rgba(14,206,206,.15);border-radius:99px;}
+.panel{display:none;animation:panelIn .3s ease both;}
+.panel.active{display:block;}
+@keyframes panelIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.panel-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#fff;}
+.panel-count{font-size:11.5px;color:rgba(14,206,206,.6);background:rgba(14,206,206,.08);border:1px solid rgba(14,206,206,.18);padding:3px 12px;border-radius:99px;}
+.upload-zone{
+  border:1.5px dashed rgba(14,206,206,.22);border-radius:14px;
+  padding:24px;text-align:center;cursor:pointer;margin-bottom:18px;
+  transition:border-color var(--t),background var(--t),transform var(--t);
+}
+.upload-zone:hover{border-color:var(--teal);background:rgba(14,206,206,.05);transform:scale(1.004);}
+.upload-zone.drag-over{border-color:var(--teal);background:rgba(14,206,206,.09);}
+.upload-zone-icon{font-size:28px;margin-bottom:6px;display:block;color:rgba(14,206,206,.5);}
+.upload-zone-text{font-size:13.5px;color:rgba(150,185,230,.5);}
+.upload-zone-text strong{color:var(--teal);}
+.upload-progress{height:2px;background:rgba(255,255,255,.06);border-radius:99px;margin-bottom:16px;overflow:hidden;display:none;}
+.upload-progress-bar{height:100%;background:linear-gradient(90deg,var(--teal),var(--blue));border-radius:99px;width:0%;transition:width .4s ease;}
+.file-list{display:flex;flex-direction:column;gap:6px;}
+.file-item{
+  display:flex;align-items:center;gap:12px;padding:12px 15px;
+  border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(14,206,206,.08);
+  transition:background var(--t),border-color var(--t),transform var(--t);animation:fileIn .22s ease both;
+}
+@keyframes fileIn{from{opacity:0;transform:translateX(-5px)}to{opacity:1;transform:translateX(0)}}
+.file-item:hover{background:rgba(14,206,206,.06);border-color:rgba(14,206,206,.18);transform:translateX(2px);}
+.file-icon{width:36px;height:36px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:17px;}
+.file-icon.pdf{background:rgba(248,113,113,.13);color:#f87171;}
+.file-icon.image{background:rgba(14,206,206,.11);color:var(--teal);}
+.file-icon.code{background:rgba(26,124,250,.12);color:var(--blue);}
+.file-icon.other{background:rgba(255,255,255,.06);color:rgba(150,185,230,.5);}
+.file-meta{flex:1;min-width:0;}
+.file-name{font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;}
+.file-type{font-size:11.5px;color:rgba(150,185,230,.4);margin-top:1px;}
+.file-actions{display:flex;gap:5px;flex-shrink:0;opacity:0;transition:opacity var(--t);}
+.file-item:hover .file-actions{opacity:1;}
+.action-btn{
+  width:30px;height:30px;border-radius:7px;border:1px solid rgba(14,206,206,.12);
+  background:rgba(255,255,255,.04);color:rgba(150,185,230,.5);font-size:13px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background var(--t),color var(--t),border-color var(--t),transform var(--t);
+}
+.action-btn:hover{background:rgba(255,255,255,.08);color:#fff;border-color:rgba(14,206,206,.3);transform:scale(1.1);}
+.action-btn.danger:hover{background:rgba(248,113,113,.14);color:#f87171;border-color:rgba(248,113,113,.3);}
+.action-btn.accent:hover{background:rgba(26,124,250,.15);color:var(--blue);border-color:rgba(26,124,250,.3);}
+.action-btn.teal:hover{background:rgba(14,206,206,.12);color:var(--teal);border-color:rgba(14,206,206,.3);}
+.empty-state{text-align:center;padding:52px 20px;color:rgba(150,185,230,.4);}
+.empty-state i{font-size:40px;margin-bottom:12px;display:block;opacity:.3;}
+.empty-state p{font-size:13.5px;}
+
+/* Toast */
+.toast-container{position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{
+  padding:10px 16px;border-radius:10px;font-size:13px;font-weight:500;font-family:'Figtree',sans-serif;
+  backdrop-filter:blur(20px);border:1px solid;min-width:210px;
+  animation:toastIn .3s ease both;display:flex;align-items:center;gap:8px;
+}
+@keyframes toastIn{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:translateX(0)}}
+.toast.success{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.28);color:#34d399;}
+.toast.error{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.28);color:#f87171;}
+.toast i{font-size:15px;}
+
+/* Modals */
+.modal-overlay{
+  position:fixed;inset:0;z-index:200;background:rgba(2,8,18,.72);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;opacity:0;transition:opacity .25s ease;
+}
+.modal-overlay.open{display:flex;}
+.modal-overlay.shown{opacity:1;}
+.modal-box{
+  width:min(720px,93vw);max-height:85vh;border-radius:18px;display:flex;flex-direction:column;
+  background:rgba(5,15,32,.92);backdrop-filter:blur(24px);
+  border:1px solid rgba(14,206,206,.15);box-shadow:0 40px 100px rgba(0,0,0,.7);
+  transform:scale(.96) translateY(10px);transition:transform .3s ease;
+}
+.modal-overlay.shown .modal-box{transform:scale(1) translateY(0);}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid rgba(14,206,206,.1);flex-shrink:0;}
+.modal-title-txt{font-size:14px;font-weight:600;color:#fff;}
+.modal-filename{font-size:11.5px;color:rgba(14,206,206,.5);margin-top:1px;font-family:monospace;}
+.close-btn{width:30px;height:30px;border-radius:7px;border:1px solid rgba(14,206,206,.14);background:rgba(255,255,255,.04);color:rgba(150,185,230,.5);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background var(--t),color var(--t);}
+.close-btn:hover{background:rgba(248,113,113,.14);color:#f87171;}
+.code-editor{flex:1;resize:none;min-height:300px;max-height:50vh;padding:16px 20px;background:#020b1a;border:none;color:#b4d0f5;font-family:'Fira Code','Courier New',monospace;font-size:12.5px;line-height:1.75;outline:none;overflow-y:auto;}
+.code-editor::-webkit-scrollbar{width:4px;}
+.code-editor::-webkit-scrollbar-thumb{background:rgba(14,206,206,.12);border-radius:99px;}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;padding:13px 20px;border-top:1px solid rgba(14,206,206,.1);flex-shrink:0;}
+.btn-ghost{padding:8px 16px;border-radius:9px;border:1px solid rgba(14,206,206,.15);background:transparent;color:rgba(150,185,230,.6);font-size:13px;font-family:'Figtree',sans-serif;cursor:pointer;transition:background var(--t),color var(--t);}
+.btn-ghost:hover{background:rgba(255,255,255,.05);color:#fff;}
+.btn-save{padding:8px 20px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#021a1a;font-size:13px;font-weight:700;font-family:'Figtree',sans-serif;cursor:pointer;box-shadow:0 5px 16px rgba(14,206,206,.25);transition:transform var(--t),box-shadow var(--t);}
+.btn-save:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(14,206,206,.38);}
+
+/* Confirm */
+.confirm-overlay{position:fixed;inset:0;z-index:300;background:rgba(2,8,18,.72);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;opacity:0;transition:opacity .2s ease;}
+.confirm-overlay.open{display:flex;}
+.confirm-overlay.shown{opacity:1;}
+.confirm-box{width:320px;border-radius:16px;padding:28px;text-align:center;background:rgba(5,15,32,.95);backdrop-filter:blur(24px);border:1px solid rgba(248,113,113,.2);box-shadow:0 30px 80px rgba(0,0,0,.6);transform:scale(.94);transition:transform .25s ease;}
+.confirm-overlay.shown .confirm-box{transform:scale(1);}
+.confirm-icon{font-size:36px;margin-bottom:12px;display:block;color:#f87171;}
+.confirm-title{font-size:16px;font-weight:700;margin-bottom:6px;color:#fff;font-family:'Syne',sans-serif;}
+.confirm-msg{font-size:13px;color:rgba(150,185,230,.5);margin-bottom:22px;line-height:1.5;}
+.confirm-btns{display:flex;gap:8px;}
+.btn-cancel-sm{flex:1;padding:10px;border-radius:9px;border:1px solid rgba(14,206,206,.15);background:transparent;color:rgba(150,185,230,.7);font-size:13px;font-family:'Figtree',sans-serif;cursor:pointer;transition:background var(--t);}
+.btn-cancel-sm:hover{background:rgba(255,255,255,.05);}
+.btn-delete-sm{flex:1;padding:10px;border-radius:9px;border:none;background:linear-gradient(135deg,#f87171,#dc2626);color:#fff;font-size:13px;font-weight:600;font-family:'Figtree',sans-serif;cursor:pointer;box-shadow:0 5px 16px rgba(248,113,113,.25);transition:transform var(--t),box-shadow var(--t);}
+.btn-delete-sm:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(248,113,113,.38);}
+</style>
+</head>
+<body>
+
+<!-- Toast container (always visible) -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ═══════════════════════════════════════════
+     LOGIN PAGE — FULL SCROLLABLE LANDING
+═══════════════════════════════════════════ -->
+<div id="loginPage">
+
+  <!-- ── SECTION 1: DARK HERO ── -->
+  <section class="hero-section">
+    <div class="hero-bg"></div>
+    <canvas id="codeCanvas"></canvas>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <div class="hero-content">
+      <div class="hero-badge"><span class="dot"></span>&nbsp;Encrypted &amp; Ephemeral File</div>
+
+      <h1 class="hero-h1">The fastest way to<br><span class="grad">save files anywhere</span></h1>
+
+      <p class="hero-sub">No accounts. No signups. No installs.<br>Just choose one code.</p>
+
+      <div class="glass-card">
+        <p class="card-instruction">Let's try. <strong>Enter a new or existing code</strong> to open, encrypt and save your files with.</p>
+        <div class="card-error" id="loginError"></div>
+        <div class="input-row">
+          <input class="code-input" id="codeInput" type="text" placeholder="e.g. my-secret-code" autocomplete="off" spellcheck="false">
+          <button class="btn-open" id="openBtn" onclick="loginWithCode()">Open →</button>
+        </div>
+        <p class="helper-text"><i class='bx bx-lock-alt'></i>It's that simple!</p>
+      </div>
+
+      <div class="trust-row">
+        <span class="trust-item"><i class='bx bx-shield-check'></i>End-to-end encrypted</span>
+        <span class="trust-item"><i class='bx bx-ghost'></i>No tracking</span>
+        <span class="trust-item"><i class='bx bxs-bolt'></i>Instant access</span>
+      </div>
+    </div>
+
+    <!-- Scroll cue -->
+    <div class="scroll-cue">
+      <span>Learn more</span>
+      <div class="scroll-arrow"></div>
+    </div>
+  </section>
+
+  <!-- ── SECTION 2: FEATURES ── -->
+  <section class="features-section">
+    <span class="section-eyebrow">Why Chota Pad?</span>
+    <h2 class="section-title">Built differently, by design</h2>
+    <p class="section-sub">No servers storing your identity. No data brokers. Just you,  and your files.</p>
+
+    <div class="features-grid">
+
+      <!-- Feature 1 -->
+      <div class="feature-card">
+        <div class="feat-icon-wrap">
+          <!-- No-login icon: ID card with prohibition circle -->
+          <svg viewBox="0 0 32 32">
+            <rect x="4" y="9" width="24" height="16" rx="2"/>
+            <circle cx="11" cy="15" r="3"/>
+            <line x1="16" y1="14" x2="24" y2="14"/>
+            <line x1="16" y1="18" x2="21" y2="18"/>
+            <circle cx="26" cy="8" r="5"/>
+            <line x1="22.5" y1="11.5" x2="29.5" y2="4.5"/>
+          </svg>
+        </div>
+        <h3 class="feat-title">No Accounts</h3>
+        <p class="feat-desc">We don't ask for your <strong>name, email, or phone number.</strong> Ever. Your files <em>is</em> your account — nothing more is needed. No <a href="#">sign-up forms</a>, no passwords to reset, no onboarding emails.</p>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="feature-card">
+        <div class="feat-icon-wrap">
+          <!-- Spy/anonymous icon -->
+          <svg viewBox="0 0 32 32">
+            <circle cx="16" cy="11" r="5"/>
+            <path d="M6 26c0-5.523 4.477-10 10-10s10 4.477 10 10"/>
+            <circle cx="16" cy="11" r="2.5" style="stroke-dasharray:2 1"/>
+            <line x1="10" y1="8" x2="5" y2="6"/>
+            <line x1="22" y1="8" x2="27" y2="6"/>
+          </svg>
+        </div>
+        <h3 class="feat-title">Only You Can Read</h3>
+        <p class="feat-desc">Files are <strong>locked behind your personal vault.</strong> Without it, nobody — not even us — can list or open your files. Your vault is <a href="#">completely private</a> and isolated from every other user on the system.</p>
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="feature-card">
+        <div class="feat-icon-wrap">
+          <!-- Encryption / notebook icon -->
+          <svg viewBox="0 0 32 32">
+            <rect x="7" y="4" width="18" height="24" rx="2"/>
+            <line x1="11" y1="10" x2="21" y2="10"/>
+            <line x1="11" y1="14" x2="21" y2="14"/>
+            <line x1="11" y1="18" x2="17" y2="18"/>
+            <circle cx="21" cy="21" r="4"/>
+            <line x1="21" y1="19.5" x2="21" y2="22.5"/>
+            <line x1="19.5" y1="21" x2="22.5" y2="21"/>
+          </svg>
+        </div>
+        <h3 class="feat-title">The Technology</h3>
+        <p class="feat-desc">Your files are <strong>hashed with industry-standard algorithms</strong> before storage. Files live in an <a href="#">isolated server folder</a> keyed to your code hash — not your identity. We never store the raw code.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── SECTION 3: POLICY ── -->
+  <section class="policy-section">
+    <div class="policy-inner">
+      <span class="policy-eyebrow">Transparency</span>
+      <h2 class="policy-title">Our Simple Policy</h2>
+
+      <ol class="policy-list">
+        <li class="policy-item">
+          <div class="policy-num">1</div>
+          <p class="policy-text">We <strong>do not collect any personal information.</strong> No name, email, IP logs, or device fingerprints are stored or associated with your code or files.</p>
+        </li>
+        <li class="policy-item">
+          <div class="policy-num">2</div>
+          <p class="policy-text">Your code is <strong>hashed using bcrypt</strong> before it ever touches our database. We cannot reverse or recover it — if you lose your code, access to your files is gone permanently.</p>
+        </li>
+        <li class="policy-item">
+          <div class="policy-num">3</div>
+          <p class="policy-text">Files are stored in a <strong>private, isolated folder</strong> on our server. No file can be accessed without a valid session token tied to the correct code.</p>
+        </li>
+        <li class="policy-item">
+          <div class="policy-num">4</div>
+          <p class="policy-text">We <strong>do not share, sell, or analyse</strong> your files or usage data with any third party, advertiser, or analytics platform. There is no tracking of any kind.</p>
+        </li>
+        <li class="policy-item">
+          <div class="policy-num">5</div>
+          <p class="policy-text">Sessions expire after <strong>24 hours</strong> for your protection. Simply re-enter your code to get a fresh session. Old tokens are rejected automatically by the server.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ── SECTION 4: FOOTER ── -->
+  <footer class="footer-section">
+    <a class="footer-back" href="#" onclick="document.getElementById('loginPage').scrollTo({top:0,behavior:'smooth'});return false;">
+      <i class='bx bx-arrow-back'></i> Back to top
+    </a>
+    <div class="footer-divider"></div>
+    <p class="footer-copy">© 2025 Chota Pad. All rights reserved.</p>
+    <p class="footer-contact">Questions or feedback? <a href="mailto:chotapad@gmail.com">Email us</a></p>
+  </footer>
+
+</div><!-- /#loginPage -->
+
+
+<!-- ═══════════════════════════════════════════
+     FILE MANAGER
+═══════════════════════════════════════════ -->
+<div id="fileManagerPage">
+  <aside class="sidebar">
+    <div class="sidebar-brand">Chota Pad</div>
+    <div class="sidebar-sub">Private file manager</div>
+    <div class="nav-label">Library</div>
+    <button class="nav-btn active" onclick="showPanel('all',this)"><i class='bx bx-folder-open'></i> All Files</button>
+    <button class="nav-btn" onclick="showPanel('pdfs',this)"><i class='bx bxs-file-pdf'></i> PDFs</button>
+    <button class="nav-btn" onclick="showPanel('photos',this)"><i class='bx bx-image-alt'></i> Photos</button>
+    <button class="nav-btn" onclick="showPanel('codes',this)"><i class='bx bx-code-alt'></i> Code Files</button>
+    <div class="sidebar-spacer"></div>
+    <div class="user-chip">
+      <div class="user-avatar" id="userAvatar">—</div>
+      <div><div class="user-name" id="userName">—</div><div class="user-role">Owner</div></div>
+    </div>
+    <button class="logout-btn" onclick="logout()"><i class='bx bx-log-out'></i> Sign Out</button>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="search-wrap">
+        <i class='bx bx-search'></i>
+        <input class="search-input" id="searchInput" placeholder="Search files…" oninput="searchFiles()">
+      </div>
+      <div class="topbar-right">
+        <button class="icon-btn" onclick="loadFiles()" title="Refresh"><i class='bx bx-refresh'></i></button>
+      </div>
+    </div>
+    <div class="content">
+      <div class="panel active" id="panel-all">
+        <div class="panel-header"><div class="panel-title">All Files</div><span class="panel-count" id="count-all">0 files</span></div>
+        <div class="file-list" id="list-all"></div>
+      </div>
+      <div class="panel" id="panel-pdfs">
+        <div class="panel-header"><div class="panel-title">PDF Documents</div><span class="panel-count" id="count-pdfs">0 files</span></div>
+        <div class="upload-zone" id="zone-pdf" onclick="document.getElementById('inp-pdf').click()" ondragover="onDragOver(event,'zone-pdf')" ondragleave="onDragLeave('zone-pdf')" ondrop="onDrop(event,'pdf')">
+          <i class='bx bx-upload upload-zone-icon'></i><div class="upload-zone-text">Drop PDFs here or <strong>browse</strong></div>
+        </div>
+        <input type="file" id="inp-pdf" accept=".pdf" hidden onchange="uploadFile(this,'pdf')">
+        <div class="upload-progress" id="prog-pdf"><div class="upload-progress-bar" id="progbar-pdf"></div></div>
+        <div class="file-list" id="list-pdfs"></div>
+      </div>
+      <div class="panel" id="panel-photos">
+        <div class="panel-header"><div class="panel-title">Photos &amp; Images</div><span class="panel-count" id="count-photos">0 files</span></div>
+        <div class="upload-zone" id="zone-photo" onclick="document.getElementById('inp-photo').click()" ondragover="onDragOver(event,'zone-photo')" ondragleave="onDragLeave('zone-photo')" ondrop="onDrop(event,'photo')">
+          <i class='bx bx-image-add upload-zone-icon'></i><div class="upload-zone-text">Drop images here or <strong>browse</strong></div>
+        </div>
+        <input type="file" id="inp-photo" accept="image/*" hidden onchange="uploadFile(this,'photo')">
+        <div class="upload-progress" id="prog-photo"><div class="upload-progress-bar" id="progbar-photo"></div></div>
+        <div class="file-list" id="list-photos"></div>
+      </div>
+      <div class="panel" id="panel-codes">
+        <div class="panel-header"><div class="panel-title">Code Snippets</div><span class="panel-count" id="count-codes">0 files</span></div>
+        <div class="upload-zone" id="zone-code" onclick="document.getElementById('inp-code').click()" ondragover="onDragOver(event,'zone-code')" ondragleave="onDragLeave('zone-code')" ondrop="onDrop(event,'code')">
+          <i class='bx bx-code-block upload-zone-icon'></i><div class="upload-zone-text">Drop code files here or <strong>browse</strong></div>
+        </div>
+        <input type="file" id="inp-code" accept=".txt,.js,.py,.html,.css,.ts,.json,.md" hidden onchange="uploadFile(this,'code')">
+        <div class="upload-progress" id="prog-code"><div class="upload-progress-bar" id="progbar-code"></div></div>
+        <div class="file-list" id="list-codes"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Editor modal -->
+<div class="modal-overlay" id="editorModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div><div class="modal-title-txt">Code Editor</div><div class="modal-filename" id="editorFilename">—</div></div>
+      <button class="close-btn" onclick="closeEditor()"><i class='bx bx-x'></i></button>
+    </div>
+    <textarea class="code-editor" id="codeEditor" spellcheck="false"></textarea>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeEditor()">Cancel</button>
+      <button class="btn-save" onclick="saveEditedFile()"><i class='bx bx-save' style="margin-right:4px"></i>Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm delete -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <i class='bx bx-trash confirm-icon'></i>
+    <div class="confirm-title">Delete File?</div>
+    <div class="confirm-msg" id="confirmMsg">This action cannot be undone.</div>
+    <div class="confirm-btns">
+      <button class="btn-cancel-sm" onclick="closeConfirm()">Cancel</button>
+      <button class="btn-delete-sm" id="confirmOkBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══ Code canvas ══ */
+(function(){
+  const canvas=document.getElementById('codeCanvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const snips=['const ','let ','var ','if(','for(','()=>','{};','===','!==','async','await','return','import','export','class ','[]','{}','();','.map(','.then(','=> {','//','null','true','false','try{','catch','throw ','new ','this.'];
+  let chars=[];
+  function resize(){
+    canvas.width=window.innerWidth;canvas.height=window.innerHeight;
+    const cw=54,ch=23;
+    const cols=Math.ceil(canvas.width/cw)+1,rows=Math.ceil(canvas.height/ch)+1;
+    chars=[];
+    for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)
+      chars.push({x:c*cw+(r%2)*27,y:r*ch,s:snips[Math.floor(Math.random()*snips.length)],o:Math.random()*.65+.08});
+  }
+  resize();window.addEventListener('resize',resize);
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.font='11px "Fira Code","Courier New",monospace';
+    chars.forEach(c=>{ctx.fillStyle=`rgba(14,206,206,${c.o})`;ctx.fillText(c.s,c.x,c.y);});
+  }
+  draw();
+  let tick=0;
+  setInterval(()=>{
+    tick++;
+    if(tick%20===0){const i=Math.floor(Math.random()*chars.length);chars[i].s=snips[Math.floor(Math.random()*snips.length)];chars[i].o=Math.random()*.65+.08;}
+    draw();
+  },2000);
+})();
+
+/* ══ Auth helpers ══ */
+const TOKEN_KEY='fp_token',USER_KEY='fp_user';
+const getToken=()=>localStorage.getItem(TOKEN_KEY);
+const getUsername=()=>localStorage.getItem(USER_KEY);
+const saveSession=(t,u)=>{localStorage.setItem(TOKEN_KEY,t);localStorage.setItem(USER_KEY,u);};
+const clearSession=()=>{localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(USER_KEY);};
+
+async function authFetch(url,opts={}){
+  opts.headers=opts.headers||{};
+  const t=getToken();if(t)opts.headers['Authorization']='Bearer '+t;
+  const res=await fetch(url,opts);
+  if(res.status===401){clearSession();showLoginPage();throw new Error('Session expired');}
+  return res;
+}
+
+/* ══ Toast ══ */
+function toast(msg,type='success'){
+  const c=document.getElementById('toastContainer');
+  const el=document.createElement('div');el.className=`toast ${type}`;
+  el.innerHTML=`<i class='bx ${type==='success'?'bx-check-circle':'bx-error-circle'}'></i>${msg}`;
+  c.appendChild(el);
+  setTimeout(()=>{el.style.animation='toastIn .3s ease reverse both';setTimeout(()=>el.remove(),320);},3200);
+}
+
+/* ══ Page transitions ══ */
+function showLoginPage(){
+  document.getElementById('loginPage').classList.remove('hiding');
+  const fm=document.getElementById('fileManagerPage');
+  fm.classList.remove('shown');setTimeout(()=>{fm.classList.remove('visible');document.body.style.overflow='hidden';},400);
+}
+function showFileManager(username){
+  document.getElementById('loginPage').classList.add('hiding');
+  document.getElementById('userName').textContent=username;
+  document.getElementById('userAvatar').textContent=username[0].toUpperCase();
+  const fm=document.getElementById('fileManagerPage');
+  setTimeout(()=>{fm.classList.add('visible');requestAnimationFrame(()=>fm.classList.add('shown'));},380);
+}
+
+/* ══ Login ══ */
+document.addEventListener('DOMContentLoaded',()=>{
+  const inp=document.getElementById('codeInput');
+  if(inp)inp.addEventListener('keydown',e=>{if(e.key==='Enter')loginWithCode();});
+});
+
+async function loginWithCode(){
+  const code=document.getElementById('codeInput').value.trim();
+  const err=document.getElementById('loginError');
+  const btn=document.getElementById('openBtn');
+  err.style.display='none';
+  if(!code){err.textContent='Please enter a code.';err.style.display='block';return;}
+  if(code.length<4){err.textContent='Code must be at least 4 characters.';err.style.display='block';return;}
+  btn.disabled=true;btn.textContent='Opening…';
+  try{
+    const res=await fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
+    const data=await res.json();
+    if(data.success){
+      saveSession(data.token,data.code_id);
+      showFileManager(data.code_id);
+      loadFiles();
+      setTimeout(()=>toast(data.is_new?'✨ New vault created! Keep your code safe.':'👋 Welcome back!','success'),500);
+    }else{err.textContent=data.message||'Incorrect code.';err.style.display='block';}
+  }catch(e){err.textContent='Network error. Is the server running?';err.style.display='block';}
+  finally{btn.disabled=false;btn.textContent='Open →';}
+}
+
+/* ══ Logout ══ */
+async function logout(){
+  try{await authFetch('/logout',{method:'POST'});}catch(_){}
+  clearSession();showLoginPage();toast('Signed out');
+}
+
+/* ══ Nav ══ */
+function showPanel(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');btn.classList.add('active');
+}
+
+/* ══ File helpers ══ */
+function fileIconInfo(n){
+  if(/\.pdf$/i.test(n))return['bxs-file-pdf','pdf'];
+  if(/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(n))return['bx-image','image'];
+  if(/\.(js|ts|py|html|css|txt|md|json)$/i.test(n))return['bx-code-alt','code'];
+  return['bx-file','other'];
+}
+const isEditable=n=>/\.(txt|js|py|html|css|ts|json|md)$/i.test(n);
+const fileExt=n=>(n.split('.').pop()||'file').toUpperCase();
+
+function buildFileItem(filename){
+  const[icon,cls]=fileIconInfo(filename);const ed=isEditable(filename);
+  const d=document.createElement('div');d.className='file-item';
+  d.innerHTML=`
+    <div class="file-icon ${cls}"><i class='bx ${icon}'></i></div>
+    <div class="file-meta"><div class="file-name" title="${filename}">${filename}</div><div class="file-type">${fileExt(filename)} file</div></div>
+    <div class="file-actions">
+      ${ed?`<button class="action-btn accent" title="Edit" onclick="editFile('${filename}')"><i class='bx bx-edit'></i></button>`:''}
+      ${ed?`<button class="action-btn teal" title="Copy" onclick="copyCode('${filename}')"><i class='bx bx-copy'></i></button>`:''}
+      <button class="action-btn" title="Download" onclick="downloadFile('${filename}')"><i class='bx bx-download'></i></button>
+      <button class="action-btn danger" title="Delete" onclick="confirmDelete('${filename}')"><i class='bx bx-trash'></i></button>
+    </div>`;
+  return d;
+}
+
+/* ══ Load files ══ */
+async function loadFiles(){
+  try{
+    const res=await authFetch('/files');const{files=[]}=await res.json();
+    const L={all:[],pdfs:[],photos:[],codes:[]};
+    files.forEach(f=>{
+      L.all.push(f);
+      if(/\.pdf$/i.test(f))L.pdfs.push(f);
+      else if(/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(f))L.photos.push(f);
+      else if(/\.(txt|js|py|html|css|ts|json|md)$/i.test(f))L.codes.push(f);
+    });
+    const render=(id,cid,arr)=>{
+      const el=document.getElementById(id);el.innerHTML='';
+      document.getElementById(cid).textContent=arr.length+(arr.length===1?' file':' files');
+      if(!arr.length)el.innerHTML=`<div class="empty-state"><i class='bx bx-folder-open'></i><p>No files here yet</p></div>`;
+      else arr.forEach((f,i)=>{const item=buildFileItem(f);item.style.animationDelay=(i*.04)+'s';el.appendChild(item);});
+    };
+    render('list-all','count-all',L.all);render('list-pdfs','count-pdfs',L.pdfs);
+    render('list-photos','count-photos',L.photos);render('list-codes','count-codes',L.codes);
+  }catch(e){if(e.message!=='Session expired')toast('Failed to load files','error');}
+}
+
+/* ══ Upload ══ */
+async function uploadFile(input,type){
+  const file=input.files[0];if(!file)return;
+  const prog=document.getElementById('prog-'+type),bar=document.getElementById('progbar-'+type);
+  prog.style.display='block';bar.style.width='20%';
+  const fd=new FormData();fd.append('file',file);
+  try{
+    bar.style.width='65%';
+    const res=await authFetch('/upload',{method:'POST',body:fd});bar.style.width='100%';
+    const data=await res.json();
+    setTimeout(()=>{prog.style.display='none';bar.style.width='0%';},600);
+    if(data.success){toast('Uploaded "'+file.name+'"');loadFiles();}
+    else toast('Upload failed: '+data.message,'error');
+  }catch(e){prog.style.display='none';if(e.message!=='Session expired')toast('Upload error','error');}
+  input.value='';
+}
+function onDragOver(e,z){e.preventDefault();document.getElementById(z).classList.add('drag-over');}
+function onDragLeave(z){document.getElementById(z).classList.remove('drag-over');}
+function onDrop(e,type){
+  e.preventDefault();
+  const zm={pdf:'zone-pdf',photo:'zone-photo',code:'zone-code'};
+  document.getElementById(zm[type]).classList.remove('drag-over');
+  const file=e.dataTransfer.files[0];if(!file)return;
+  const im={pdf:'inp-pdf',photo:'inp-photo',code:'inp-code'};
+  const inp=document.getElementById(im[type]);
+  const dt=new DataTransfer();dt.items.add(file);inp.files=dt.files;uploadFile(inp,type);
+}
+
+/* ══ Download ══ */
+async function downloadFile(filename){
+  try{
+    const res=await authFetch('/uploads/'+encodeURIComponent(filename));
+    const blob=await res.blob(),url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=filename;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+    toast('Downloading "'+filename+'"');
+  }catch(e){if(e.message!=='Session expired')toast('Download failed','error');}
+}
+
+/* ══ Copy ══ */
+async function copyCode(filename){
+  try{
+    const res=await authFetch('/uploads/'+encodeURIComponent(filename));
+    await navigator.clipboard.writeText(await res.text());toast('Code copied');
+  }catch(e){if(e.message!=='Session expired')toast('Could not copy','error');}
+}
+
+/* ══ Editor ══ */
+let editingFile=null;
+async function editFile(filename){
+  try{
+    const res=await authFetch('/uploads/'+encodeURIComponent(filename));
+    document.getElementById('codeEditor').value=await res.text();
+    document.getElementById('editorFilename').textContent=filename;
+    editingFile=filename;openModal('editorModal');
+  }catch(e){if(e.message!=='Session expired')toast('Could not open','error');}
+}
+async function saveEditedFile(){
+  if(!editingFile)return;
+  try{
+    const content=document.getElementById('codeEditor').value;
+    const res=await authFetch('/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:editingFile,content})});
+    const data=await res.json();
+    if(data.success){toast('Saved');closeEditor();loadFiles();}
+    else toast('Save failed: '+data.message,'error');
+  }catch(e){if(e.message!=='Session expired')toast('Save error','error');}
+}
+function closeEditor(){closeModal('editorModal');editingFile=null;}
+
+/* ══ Confirm delete ══ */
+let pendingDelete=null;
+function confirmDelete(filename){
+  pendingDelete=filename;
+  document.getElementById('confirmMsg').textContent=`"${filename}" will be permanently deleted.`;
+  document.getElementById('confirmOkBtn').onclick=doDelete;
+  openModal('confirmOverlay');
+}
+async function doDelete(){
+  closeModal('confirmOverlay');if(!pendingDelete)return;
+  try{
+    const res=await authFetch('/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:pendingDelete})});
+    const data=await res.json();
+    if(data.success){toast('"'+pendingDelete+'" deleted');loadFiles();}
+    else toast('Delete failed','error');
+  }catch(e){if(e.message!=='Session expired')toast('Delete error','error');}
+  pendingDelete=null;
+}
+function closeConfirm(){closeModal('confirmOverlay');pendingDelete=null;}
+
+/* ══ Modal utils ══ */
+function openModal(id){const el=document.getElementById(id);el.classList.add('open');requestAnimationFrame(()=>el.classList.add('shown'));}
+function closeModal(id){const el=document.getElementById(id);el.classList.remove('shown');setTimeout(()=>el.classList.remove('open'),260);}
+
+/* ══ Search ══ */
+function searchFiles(){
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('.file-item').forEach(item=>{
+    item.style.display=item.querySelector('.file-name').textContent.toLowerCase().includes(q)?'':'none';
+  });
+}
+
+/* ══ Boot ══ */
+window.onload=async function(){
+  const token=getToken(),username=getUsername();
+  if(token&&username){
+    try{
+      const res=await fetch('/me',{headers:{'Authorization':'Bearer '+token}});
+      if(res.ok){const d=await res.json();showFileManager(d.code_id||username);loadFiles();return;}
+    }catch(_){}
+    clearSession();
+  }
+};
+</script>
+</body>
+</html>
